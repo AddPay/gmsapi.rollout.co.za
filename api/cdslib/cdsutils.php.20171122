@@ -1,0 +1,1190 @@
+<?php
+/**
+ * CDS Utils
+ *
+ * @version 1.00
+ * @author Paul Bailey
+ * @copyright Cirrlus Corp
+ * @link http://www.myexcelreports.com
+ *
+ */
+ 
+// converts an array of key objects to array of key/values
+// converts test=>1234 to result['test'] = 1234
+// Paul
+// if you add a dblink, it will saniztize the values
+function cds_ObjectToArray($data, $addquotes = false, $dblink = null) 
+{
+    foreach ($data as $key => $value)
+    {
+		    $value = $dblink != null ? $dblink->SQLFix($value) : $value;
+				$value = $addquotes ? "'".$value."'" : $value;
+				
+        $result[$key] = $value;
+    }
+    return $result;
+}
+ 
+
+// Helper to send POST requests.
+function cds_sendPostRequest($url,$params) {
+  
+        $postVals = '';
+        foreach($params as $key=>$val) {
+					$postVals .= ($key)."=".($val)."&";	
+				}
+               
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, substr($postVals,0,(strlen($postVals)-1)));
+        curl_setopt($ch, CURLOPT_HEADER, 0);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        $return_string = curl_exec($ch);
+        curl_close($ch);
+        
+        return $return_string;
+}
+
+
+
+ 
+function cds_Now() {
+	
+	return date('Y-m-d H:i:s');
+	
+}
+ 
+ 
+function cds_CheckSMSNo($smsno) {
+	
+	$no = cds_SearchAndReplace($smsno,'+','',false);
+	
+	if (strlen($no) > 0) {
+		if ($no[0] == '0') {			
+			$no = '27'.substr($no, 1, strlen($no)); 			
+		}		
+	}	
+	return $no;
+	
+}
+ 
+ 
+function cds_LogFile($fname,$message) {
+	
+	$time = date('Y-m-d H:i:s').','.$message.PHP_EOL;
+	cds_AppendFile('logs/'.date('Y-m-d').'_'.$fname.'.txt', $time); 		
+
+} 
+
+function cds_QuoteArray($ids) {
+	
+	$ids = explode(',', $ids);	
+	$ids = "'".implode($ids,"','")."'";		
+	return $ids;
+	
+}
+
+function cds_QuoteArrayValues($valuearay) {
+	
+	
+	foreach	($valuearay as $key => $value) {
+		$valuearay[$key] = "'".$value."'";		
+	}
+	
+	return $valuearay;
+	
+}
+
+function cds_GetGet($field,$default) {
+	
+  return isset($_GET[$field]) ? $_GET[$field] : $default;	
+	
+}
+
+
+function cds_GetPost($field,$default) {
+	
+  return isset($_POST[$field]) ? $_POST[$field] : cds_GetGet($field,$default);	
+	
+}
+
+
+ 
+		function cds_removeJsonTrailingCommas($json)
+    {
+        $json=preg_replace('/,\s*([\]}])/m', '$1', $json);
+        return $json;
+    }
+
+    function cds_JsonDecode($json)
+    {
+        return json_decode(cds_removeJsonTrailingCommas(utf8_encode($json)));
+    }
+ 		
+
+function cds_PostURL($url, $parameters) {
+	
+	// use key 'http' even if you send the request to https://...
+	$options = array(
+  	  	'http' => array(
+    	    'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
+      	  	'method'  => 'POST',
+      	  	'timeout' => 60, 
+			"ignore_errors" => 1, 
+        	'content' => http_build_query($parameters),
+	    ),
+	);
+	$context  = stream_context_create($options);
+	$result = file_get_contents($url, false, $context);
+	
+	return $result;
+}
+ 
+ 
+
+function cds_EncryptJoomlaPassword($password) {
+	
+	$salt = md5(rand(1000));
+	
+	return md5($password.$salt).':'.$salt;
+	
+}
+
+function cds_linefeed($value) {
+	
+	return $value.'<br>';
+	
+}
+
+//gets offset to our timesone in SA
+function cds_getTimezoneOffset() {
+	
+	return timezone_offset_get( new DateTimeZone( 'Africa/Johannesburg' ), new DateTime() );
+	
+}
+
+// return time value, else a format
+function cds_CurrentDatetime($formatdate = '') {
+	
+		$offset = cds_getTimezoneOffset();
+    $now = time()+$offset;
+		if ($formatdate !== '') {
+			return date($formatdate,$now);
+		} else
+			return $now;
+}
+
+function cds_SanitizeFilename($str = '')
+{
+    $str = strip_tags($str); 
+    $str = preg_replace('/[\r\n\t ]+/', ' ', $str);
+    $str = preg_replace('/[\"\*\/\:\<\>\?\'\|]+/', ' ', $str);
+    $str = strtolower($str);
+    $str = html_entity_decode( $str, ENT_QUOTES, "utf-8" );
+    $str = htmlentities($str, ENT_QUOTES, "utf-8");
+    $str = preg_replace("/(&)([a-z])([a-z]+;)/i", '$2', $str);
+    $str = str_replace(' ', '-', $str);
+    $str = rawurlencode($str);
+    $str = str_replace('%', '-', $str);
+    return $str;
+} 
+
+function cds_RGBstr2Hex($string) {
+	
+	$colors = explode(',',$string);
+	
+	$r = dechex($colors[0]);
+	$g = dechex($colors[1]);
+	$b = dechex($colors[2]);
+	
+	If (strlen($r)<2) {$r='0'.$r;}
+	If (strlen($g)<2) {$g='0'.$g;}
+	If (strlen($b)<2) {$b='0'.$b;}
+ 
+ 	return $r . $g . $b;
+	
+}
+
+function cds_GetIP()
+{
+  if (!empty($_SERVER['HTTP_CLIENT_IP']))
+  //check ip from share internet
+  {
+    $ip=$_SERVER['HTTP_CLIENT_IP'];
+  }
+  elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR']))
+  //to check ip is pass from proxy
+  {
+    $ip=$_SERVER['HTTP_X_FORWARDED_FOR'];
+  }
+  else
+  {
+    $ip=$_SERVER['REMOTE_ADDR'];
+  }
+  return $ip;
+}
+
+function cds_CountOccurance($SearchString,$SearchWord) {
+	
+  return substr_count($SearchString,$SearchWord);
+	
+}
+
+//copies a substring from start to end
+function cds_Copy($CopyString,$StartPos, $Length) {
+
+  $str = substr($CopyString, $StartPos, $Length);	
+  return $str;
+	
+}
+
+// copies from right
+function cds_CopyRight($string,$noofchars)
+{
+    $vright = substr($string, strlen($string)-$noofchars,$noofchars);
+    return $vright;
+   
+} 
+
+// copies from right
+function cds_CopyLeftNoCharFromRight($string,$noofchars)
+{
+    $vright = substr($string, 0, strlen($string)-$noofchars);
+    return $vright;
+   
+} 
+
+// copies from right
+function cds_CopyLeft($string,$noofchars)
+{
+    $vright = substr($string, 0,$noofchars);
+    return $vright;
+   
+} 
+
+function cds_CopyLeftString($string,$searchstring)
+{
+    $pos = cds_Pos($string,$searchstring);
+		
+		if ($pos >= 0) {
+			return cds_CopyLeft($string,$pos);
+		} else {
+			return $string;
+		}
+    
+} 
+
+function cds_CopyRightString($string,$searchstring)
+{
+    $pos = cds_Pos($string,$searchstring);
+		
+		if ($pos >= 0) {
+			return cds_CopyLeft($string,$pos);
+		} else {
+			return $string;
+		}
+    
+} 
+
+
+// eg: $string = "123456789"; $a = "12"; $b = "9"; echo get_between($string, $a, $b); //Output: //345678 
+function cds_GetStrBetween($input, $startstr, $endstr, $include = TRUE)
+{
+  
+	if ($include == TRUE)
+	{
+		$substr = substr($input, strpos($input, $startstr), strpos($input, $endstr)+strlen($endstr));					
+	}
+	else
+	{
+		$substr = substr($input, strlen($startstr)+strpos($input, $startstr), (strlen($input) - strpos($input, $endstr))*(-1));	
+	}
+	
+		
+  return $substr;
+} 
+
+// eg: $string = "123456789"; $a = "12"; $b = "9"; echo get_between($string, $a, $b); //Output: //345678 
+function cds_GetStr($input, $startpos, $endpos)
+{
+  
+		$substr = substr($input, $startpos, $endpos);	
+
+		
+  return $substr;
+}
+
+function CDS_ParseItemsToList($TokenList, $Token)
+{
+  if (trim($TokenList) != '') 
+  {
+	  return explode($Token, $TokenList);	
+	}   
+}
+
+//function cds_ParseItemsToList($TokenList, $Token)
+//{
+//	return CDS_ParseItemsToList($TokenList, $Token);
+//}
+
+function CDS_GetURLValuesArray($url) {
+
+	$MyUrlArray = array();
+  $myArray = CDS_ParseItemsToList($url,',');
+	
+	foreach ($myArray as $key => $value) {
+	  $splitarray = CDS_ParseItemsToList($value,'=');
+		$MyUrlArray[$splitarray[0]] = $splitarray[1];
+    //echo "$key = $value\n";
+	}
+	
+	return $MyUrlArray;
+}
+
+//function CDS_GetURLValuesArray($url) 
+//{
+//	return cds_GetURLValuesArray($url);
+//}
+
+function cds_Fieldbyname($dataset,$rowno,$fieldname){
+	
+	return $dataset[$rowno][$fieldname];
+	
+}
+
+function cds_GetFileContents($filename) {
+
+	$ch = curl_init();
+	$timeout = 5; // set to zero for no timeout
+	curl_setopt ($ch, CURLOPT_URL, $filename);
+	curl_setopt ($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt ($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
+	$file_contents = curl_exec($ch);
+	curl_close($ch);
+
+return $file_contents;
+	
+}
+
+function cds_GetFileContentsFromURL($filename) {
+  return cds_GetFileContents($filename);
+}
+
+function cds_NewRow($class = "") {
+	
+	return '<tr '.$class.'>';
+	
+}
+
+function cds_NewCol($class,$value = "", $closecol = TRUE) {
+
+  $html = '  <td '.$class.'>'.$value; 
+	return ($closecol === TRUE ? $html.'</td>' : $html);
+	
+}
+
+function cds_CloseRow() {
+	
+	return '</tr>';
+	
+}
+
+function cds_CloseCol($value="") {
+	
+	return '  '.$value.'</td>';
+	
+}
+
+function cds_NewTable($class = "", $newrow = TRUE, $newrowclass = "") {
+
+  $html = '  <table '.$class.'>'; 
+	return ($newrow === TRUE ? $html.cds_NewRow($newrowclass) : $html);
+	
+}
+
+function cds_CloseTable($closerow = TRUE) {
+
+  $html = '  </table>'; 
+	return ($closerow === TRUE ? cds_CloseRow(). $html : $html);
+	
+}
+
+
+function cds_SaveFile($filename, $contents) {
+	
+	$fp = fopen($filename, 'wb+');
+	
+	if ($fp === false) {
+			echo "ERROR:".$filename;
+	}	
+	
+	fwrite($fp, $contents);
+	fflush($fp);	
+	fclose($fp);
+
+	
+}	
+
+function cds_ReadFile($filename) {
+	
+	$handle = fopen($filename, "rb");
+	$contents = fread($handle, filesize($filename));
+	fclose($handle);
+
+	return $contents;
+	
+}	
+
+function cds_AppendFile($filename, $contents) {
+	
+	$filecontents = cds_ReadFile($filename);	
+	$contents  .= $filecontents;
+	
+	cds_SaveFile($filename, $contents);
+	
+}	
+
+function cds_GetCurrentDateTimeStamp() {
+	
+	return date('ymd_hms',time());	
+	
+	
+}
+
+function cds_GetFileDir($filename) {
+	return dirname($filename);
+}
+
+function cds_GetWebsiteRoot() {
+	return $_SERVER['DOCUMENT_ROOT'];
+}
+
+
+function cds_GetCurrentLocation() {
+	return $_SERVER['PATH_INFO'];
+}
+
+function cds_ForceDirectories($dir) {
+		
+	if (!file_exists($dir)) {
+  	  mkdir($dir, 0755, true);			
+	} 	
+	
+}
+
+
+function cds_CopyFile($filenameurl,$dirname,$createdir = true, $overwrite = true){
+
+    @$file = fopen ($filenameurl, "rb");
+    if (!$file) {
+        return false;
+    }else {
+        $filename = basename($filenameurl);
+				
+				if (!file_exists($dirname) && $createdir) {
+					mkdir($dirname, 0755, true);	 	
+				}	
+				
+				$copyto = $dirname."$filename";
+				
+				if (file_exists($copyto) && !$overwrite) {
+					return false;
+				}
+				
+        $fc = fopen($copyto, "wb");
+				if ($fc) {
+					while (!feof ($file)) {
+          	 $line = fread ($file, 1028);
+           	fwrite($fc,$line);
+        	}	
+					fclose($fc);
+        	return true;					
+				} else {
+					return false;
+				}                        
+    }
+} 
+
+
+
+function cds_EscapeStr($str) {
+	return mysql_real_escape_string($str);
+}
+
+function cds_SearchAndReplace($SearchString,$SearchWord,$ReplaceWord, $CaseSensitive){
+	  
+  if ($CaseSensitive) 
+  	return str_replace($SearchWord,$ReplaceWord,$SearchString);	
+  else
+	return str_ireplace($SearchWord,$ReplaceWord,$SearchString);	  
+	
+	
+}
+
+// It works as such:
+//$haystack = "The quick brown fox jumps over the lazy dog.";
+//$needle = array("fox", "dog", ".", "duck")
+//var_dump(multineedle_stripos($haystack, $needle));
+/* Output:
+   array(3) {
+     ["fox"]=>
+     int(16)
+     ["dog"]=>
+     int(40)
+     ["."]=>
+     int(43)
+     ["duck"]=>
+     bool(false)
+   }
+*/
+function cds_PosInArray($needles, $haystack, $offset=0) {
+    foreach($needles as $needle) {
+        $found[$needle] = stripos($haystack, $needle, $offset);
+				if ($found[$needle] === false) $found[$needle] = -1;
+    }
+    return $found;
+}
+
+
+function cds_Pos($haystack, $needle, $offset = 0) {
+	
+  $pos = stripos($haystack, $needle, $offset);
+  
+  if ($pos === false) return -1;
+    else return $pos;
+	
+}
+
+
+function cds_GetDaysInMonth($Month, $Year)
+{
+   return cal_days_in_month(CAL_GREGORIAN, $Month, $Year);// 31
+}
+
+function cds_ShowMessage($message)
+{
+   echo '<script type="text/javascript">alert("' . $message . '");</script>';
+}
+
+function cds_DownloadFile($filename)
+{
+
+   $url = $filename;
+
+   $str = '<meta http-equiv="refresh" content="2;url="' . $url . '">';
+
+   //echo '<script type="text/javascript">window.location.assign("'.$url.'");</script>';
+
+
+   if( ! empty($_SERVER['HTTPS']) && ('on' == $_SERVER['HTTPS']))
+   {
+      $uri = 'https://';
+   }
+   else
+   {
+      $uri = 'http://';
+   }
+   $uri .= $_SERVER['HTTP_HOST'];
+   header('Location: ' . $uri);
+	 echo 'Location: ' . $uri;
+   exit;
+
+}
+   
+function cds_EmailAttachment($filename, $path, $mailto, $from_mail, $from_name, $replyto, $subject, $message)
+{
+
+   $file = $path . $filename;
+   if(file_exists($file))
+   {
+      $file_size = filesize($file);
+      $handle = fopen($file, "r");
+      $content = fread($handle, $file_size);
+      fclose($handle);
+      $content = chunk_split(base64_encode($content));
+      $uid = md5(uniqid(time()));
+      $name = basename($file);
+      $header = "From: " . $from_name . " <" . $from_mail . ">\r\n";
+      $header .= "Reply-To: " . $replyto . "\r\n";
+      $header .= "MIME-Version: 1.0\r\n";
+      $header .= "Content-Type: multipart/mixed; boundary=\"" . $uid . "\"\r\n\r\n";
+      $header .= "This is a multi-part message in MIME format.\r\n";
+      $header .= "--" . $uid . "\r\n";
+      $header .= "Content-type:text/plain; charset=iso-8859-1\r\n";
+      $header .= "Content-Transfer-Encoding: 7bit\r\n\r\n";
+      $header .= $message . "\r\n\r\n";
+      $header .= "--" . $uid . "\r\n";
+      $header .= "Content-Type: application/octet-stream; name=\"" . $filename . "\"\r\n";// use different content types here
+      $header .= "Content-Transfer-Encoding: base64\r\n";
+      $header .= "Content-Disposition: attachment; filename=\"" . $filename . "\"\r\n\r\n";
+      $header .= $content . "\r\n\r\n";
+      $header .= "--" . $uid . "--";
+      if(mail($mailto, $subject, "", $header))
+      {
+         return true;// or use booleans here
+      }
+      else
+      {
+         return false;
+      }
+   }
+   else
+      return false;
+}
+
+function forceDownload($archiveName) {
+
+  if( ! empty($_SERVER['HTTPS']) && ('on' == $_SERVER['HTTPS']))
+   {
+      $uri = 'https://';
+   }
+   else
+   {
+      $uri = 'http://';
+   }
+   $uri .= $_SERVER['HTTP_HOST'];	
+	 
+	$archiveName = $uri."/".$archiveName;
+	
+        if(ini_get('zlib.output_compression')) {
+            ini_set('zlib.output_compression', 'Off');
+        }
+
+        // Security checks
+        if( $archiveName == "" ) {
+            echo "<html><title>Public Photo Directory - Download </title><body><BR><B>ERROR:</B> The download file was NOT SPECIFIED.</body></html>";
+            exit;
+        }
+        elseif ( ! file_exists( $archiveName ) ) {
+            echo "<html><title>Public Photo Directory - Download </title><body><BR><B>ERROR:</B> File not found.</body></html>";
+						echo $archiveName;
+            exit;
+        }
+
+        header("Pragma: public");
+        header("Expires: 0");
+        header("Cache-Control: must-revalidate, post-check=0, pre-check=0");
+        header("Cache-Control: private",false);
+        header("Content-Type: application/excel");
+        header("Content-Disposition: attachment; filename=".basename($archiveName).";" );
+        header("Content-Transfer-Encoding: binary");
+        header("Content-Length: ".filesize($archiveName));
+        readfile("$archiveName");
+    }
+		
+ 	
+
+function copyFile($url,$dirname){
+    @$file = fopen ($url, "rb");
+    if (!$file) {
+        echo"<font color=red>Failed to copy $url!</font><br>";
+        return false;
+    }else {
+        $filename = basename($url);
+        $fc = fopen($dirname."$filename", "wb");
+        while (!feof ($file)) {
+           $line = fread ($file, 1028);
+           fwrite($fc,$line);
+        }
+        fclose($fc);
+        echo "<font color=blue>File $url saved to PC!</font><br>";
+        return true;
+    }
+} 
+
+function force_download($file)
+{
+    $dir      = "";
+    if ((isset($file))&&(file_exists($dir.$file))) {
+       header("Content-type: application/force-download");
+       header('Content-Disposition: inline; filename="' . $dir.$file . '"');
+       header("Content-Transfer-Encoding: Binary");
+       header("Content-length: ".filesize($dir.$file));
+       header('Content-Type: application/octet-stream');
+       header('Content-Disposition: attachment; filename="' . $file . '"');
+       readfile("$dir$file");
+    } else {
+       echo "No file selected";
+    } //end if
+
+}//end function 
+
+function force_download1($file)
+{
+ 
+// fix for IE catching or PHP bug issue
+header("Pragma: public");
+header("Expires: 0"); // set expiration time
+header("Cache-Control: must-revalidate, post-check=0, pre-check=0");
+// browser must download file from server instead of cache
+
+// force download dialog
+header("Content-Type: application/force-download");
+header("Content-Type: application/octet-stream");
+header("Content-Type: application/download");
+
+// use the Content-Disposition header to supply a recommended filename and
+// force the browser to display the save dialog.
+header("Content-Disposition: attachment; filename=".basename($file).";");
+
+/*
+The Content-transfer-encoding header should be binary, since the file will be read
+directly from the disk and the raw bytes passed to the downloading computer.
+The Content-length header is useful to set for downloads. The browser will be able to
+show a progress meter as a file downloads. The content-lenght can be determines by
+filesize function returns the size of a file.
+*/
+header("Content-Transfer-Encoding: binary");
+header("Content-Length: ".filesize($file));
+
+readfile($file);
+exit(0);
+
+    
+
+}
+
+function cds_GetCurPageURL() {
+ $pageURL = 'http';
+ if ($_SERVER["HTTPS"] == "on") {$pageURL .= "s";}
+ $pageURL .= "://";
+ if ($_SERVER["SERVER_PORT"] != "80") {
+  $pageURL .= $_SERVER["SERVER_NAME"].":".$_SERVER["SERVER_PORT"].$_SERVER["REQUEST_URI"];
+ } else {
+  $pageURL .= $_SERVER["SERVER_NAME"].$_SERVER["REQUEST_URI"];
+ }
+ return $pageURL;
+}
+
+function cds_GetCurPageName() {
+ return substr($_SERVER["SCRIPT_NAME"],strrpos($_SERVER["SCRIPT_NAME"],"/")+1);
+}
+
+function cds_GetBaseURL() {
+	
+$base = str_replace(
+    $_SERVER['DOCUMENT_ROOT'],
+    '',
+    realpath(dirname(__FILE__)));
+
+	$base = ($base == '') ? '/' : '';	
+	
+	return $base; 
+	
+}
+
+function cds_ExtractFilePath($filename) {
+	return ($filename !== "" ? dirname($_SERVER['PHP_SELF']) : dirname($filename)) ;	
+}
+function cds_ExtractFileName($filename) {
+	return basename($filename) ;	
+}
+
+function cds_ExtractFileExtension($filename) {	
+	return pathinfo($filename, PATHINFO_EXTENSION);
+}
+
+function cds_CSVtoArray($csvcontents) {
+	
+	$rows = array_map('str_getcsv', $csvcontents);
+	$header = array_shift($rows);
+	$csv = array();
+	foreach ($rows as $row) {
+  	$csv[] = array_combine($header, $row);
+	}
+	
+	return $csv; 
+	
+}
+
+
+function cds_SQLResultTable($host, $user, $pass, $db, $Query)
+{
+    $link = mysql_connect($host, $user, $pass) or die('Could not connect: ' . mysql_error());      //build MySQL Link
+    mysql_select_db($db) or die('Could not select database');        //select database
+    $Table = "";  //initialize table variable
+   
+    $Table.= "<table border='1' style=\"border-collapse: collapse;\">"; //Open HTML Table
+   
+    $Result = mysql_query($Query); //Execute the query
+    if(mysql_error())
+    {
+        $Table.= "<tr><td>MySQL ERROR: " . mysql_error() . "</td></tr>";
+    }
+    else
+    {
+        //Header Row with Field Names
+        $NumFields = mysql_num_fields($Result);
+        $Table.= "<tr style=\"background-color: #ff0000; color: #FFFFFF;\">";
+        for ($i=0; $i < $NumFields; $i++)
+        {    
+            $Table.= "<th>" . mysql_field_name($Result, $i) . "</th>";
+        }
+        $Table.= "</tr>";
+   
+        //Loop thru results
+        $RowCt = 0; //Row Counter
+        while($Row = mysql_fetch_assoc($Result))
+        {
+            //Alternate colors for rows
+            if($RowCt++ % 2 == 0) $Style = "background-color: #ffffff;";
+            else $Style = "background-color: #ffffff;";
+           
+            $Table.= "<tr style=\"$Style\">";
+            //Loop thru each field
+            foreach($Row as $field => $value)
+            {
+                $Table.= "<td>$value</td>";
+            }
+            $Table.= "</tr>";
+        }
+        $Table.= "<tr style=\"background-color: #ff0000; color: #FFFFFF;\"><td colspan='$NumFields'>Query Returned " . mysql_num_rows($Result) . " records</td></tr>";
+    }
+    $Table.= "</table>";
+   
+    return $Table;
+}
+
+
+function cds_GetListOfTables($host, $user, $pass, $db)
+{
+    $link = mysql_connect($host, $user, $pass) or die('Could not connect: ' . mysql_error());      //build MySQL Link
+    mysql_select_db($db) or die('Could not select database');        //select database
+    $Table = "";  //initialize table variable
+    
+    $Result = mysql_query('show tables from '.$db); //Execute the query
+    if(mysql_error())
+    {
+        $Table.= "<tr><td>MySQL ERROR: " . mysql_error() . "</td></tr>";
+    }
+    else
+    { 
+        while($Row = mysql_fetch_assoc($Result))
+        {
+            //Loop thru each field
+            foreach($Row as $field => $value)
+            {
+                $Table.= '<option value="'.$value.'">'.$value.'</option>';
+            }
+        }
+    }
+   
+    return $Table;
+}
+
+function cds_GetListOfFieldnames($host, $user, $pass, $db, $table)
+{
+    $link = mysql_connect($host, $user, $pass) or die('Could not connect: ' . mysql_error());      //build MySQL Link
+    mysql_select_db($db) or die('Could not select database');        //select database
+    $Table = "";  //initialize table variable
+    
+    $Result = mysql_query('show columns from '.$table); //Execute the query
+    if(mysql_error())
+    {
+        $Table.= "<tr><td>MySQL ERROR: " . mysql_error() . "</td></tr>";
+    }
+    else
+    { 
+        while($Row = mysql_fetch_assoc($Result))
+        {
+          $Table.= $Row['Field'].'&#10;';
+        }
+    }
+   
+    return $Table;
+}
+
+
+//#ff0000
+
+function cds_UploadFile($file_id, $folder="", $types="", $uniquefilename = false) {
+
+    if(!$_FILES[$file_id]['name']) return array('','No file specified');
+
+    $file_title = $_FILES[$file_id]['name'];
+    //Get file extension
+    $ext_arr = split("\.",basename($file_title));
+    $ext = strtolower($ext_arr[count($ext_arr)-1]); //Get the last extension
+
+    //Not really uniqe - but for all practical reasons, it is
+		if ($uniquefilename) {
+			$uniqer = substr(md5(uniqid(rand(),1)),0,5). '_';	
+		} else {
+			$uniqer = '';
+		}
+    		
+    $file_name = $uniqer.$file_title;//Get Unique Name
+
+    $all_types = explode(",",strtolower($types));
+    if($types) {
+        if(in_array($ext,$all_types)) {
+					
+				}
+        else {
+            $result = "'".$_FILES[$file_id]['name']."' is not a valid file."; //Show error if any.
+            return array('',$result);
+        }
+    }
+
+    //Where the file must be uploaded to
+    if($folder) $folder .= '/';//Add a '/' at the end of the folder
+    $uploadfile = $folder . $file_name;
+
+    $result = '';
+    //Move the file from the stored location to the new location
+    if (!move_uploaded_file($_FILES[$file_id]['tmp_name'], $uploadfile)) {
+        $result = "Cannot upload the file '".$_FILES[$file_id]['name']."'"; //Show error if any.
+        if(!file_exists($folder)) {
+            $result .= " : Folder don't exist.";
+        } elseif(!is_writable($folder)) {
+            $result .= " : Folder not writable.";
+        } elseif(!is_writable($uploadfile)) {
+            $result .= " : File not writable.";
+        }
+        $file_name = '';
+        
+    } else {
+        if(!$_FILES[$file_id]['size']) { //Check if the file is made
+            @unlink($uploadfile);//Delete the Empty file
+            $file_name = '';
+            $result = "Empty file found - please use a valid file."; //Show the error message
+        } else {
+            chmod($uploadfile,0777);//Make it universally writable.
+        }
+    }
+
+    return array($uploadfile,$result);
+}
+
+function cds_DeleteAllFiles($path, $fileext = '', $fileolderthandate = null) {
+	
+	if ($fileolderthandate == null) {
+		$fileolderthandate = time();
+	}
+	
+	foreach (new DirectoryIterator($path) as $fileInfo) {
+	    if (!$fileInfo->isDot() && ($fileInfo->getMTime() <= $fileolderthandate)) {
+			
+				$ext = $fileInfo->getExtension();
+				if (($fileext == '') || (strtoupper($ext) == strtoupper($fileext))) {
+					unlink($fileInfo->getPathname());	
+				}					
+				
+	    }
+	}
+	
+}
+
+function cds_Guid($namespace = '') {    
+
+    static $guid = '';
+    $uid = uniqid("", true);
+    $data = $namespace;
+    $data .= $_SERVER['REQUEST_TIME'];
+    $data .= $_SERVER['HTTP_USER_AGENT'];
+    $data .= $_SERVER['REMOTE_ADDR'];
+    $data .= $_SERVER['REMOTE_PORT'];
+    $hash = strtoupper(hash('ripemd128', $uid . $guid . md5($data)));
+    $guid = '{' .  
+            substr($hash,  0,  8) .
+            '-' .
+            substr($hash,  8,  4) .
+            '-' .
+            substr($hash, 12,  4) .
+            '-' .
+            substr($hash, 16,  4) .
+            '-' .
+            substr($hash, 20, 12) .
+            '}';
+    return $guid;
+  }
+
+
+function cds_QuickMail($to, $from_user, $from_email,$subject = '(No subject)', $message = '')
+   {
+      $from_user = "=?UTF-8?B?".base64_encode($from_user)."?=";
+      $subject = "=?UTF-8?B?".base64_encode($subject)."?=";
+      $headers = "From: $from_user <$from_email>\r\n".
+               "MIME-Version: 1.0" . "\r\n" .
+               "Content-type: text/html; charset=UTF-8" . "\r\n";
+     return mail($to, $subject, $message, $headers);
+   }
+
+
+/* Convert Extended ASCII Characters to HTML Entities */
+function cds_ascii2entities($string){
+
+		
+		//$string = "<![CDATA[".$string."]]>";
+		//return str_replace(chr(160), "&#160", $string);
+		
+		$string = str_replace(chr(160), " ", $string);
+		$string = str_replace(chr(136), "e", $string);
+		$string = str_replace(chr(137), "e", $string);
+		$string = str_replace(chr(138), "e", $string);		
+		
+		$string = htmlentities($string, ENT_COMPAT, "UTF-8");
+		return $string;
+
+
+    for($i=128;$i<=255;$i++){
+        $entity = htmlentities(chr($i), ENT_QUOTES, 'cp1252');
+        $temp = substr($entity, 0, 1);
+        $temp .= substr($entity, -1, 1);
+        if ($temp != '&;'){
+            $string = str_replace(chr($i), '', $string);
+        }
+        else{
+            $string = str_replace(chr($i), $entity, $string);
+        }
+    }
+    return str_replace("&nbsp", "&#160", $string);
+} 
+
+/**
+ * ouputs structured XML from sql
+ *
+ * @param string  $sql       - SQL statement
+ * @param string  $structure - XML hierarchy
+ */
+function cds_sql2xml($localhost, $username, $password, $database, $sql, $structure = 0, $excludefields = "") {
+
+	$xml = "";
+	$excludefields = strtoupper($excludefields);
+
+	//$tmp_tables = $this->get_select_query_tables($sql);
+  //$listoftables = cds_GetTables($sql);
+	//echo $listoftables;
+	$tablename =  "Records";
+
+  // init variables for row processing
+    $row_current = $row_previous = null;
+    // set MySQL username/password and connect to the database
+    $db_cn = mysql_pconnect($localhost, $username, $password);
+    $result = mysql_select_db($database, $db_cn);
+    $result = mysql_query($sql, $db_cn);
+    // get number of columns in result
+    $ncols = mysql_num_fields($result);
+    // is there a hierarchical structure
+    if ($structure == 0) {
+        $deep = -1;
+        $pos = 0;
+    }
+    else {
+        // set hierarchy levels and number of levels
+        $hierarchy = explode(',', $structure);
+        $deep = count($hierarchy);
+        // set flags for opened tags
+        for ($i = 0; $i <= $deep; $i++) {
+            $tagOpened[$i] = false;
+        }
+        // set initial row
+        for ($i = 0; $i < $ncols; $i++) {
+            $rowPrev[$i] = microtime();
+        }
+    }
+    // loop through result set
+    while ($row = mysql_fetch_row($result)) {
+        // loop through hierarchy levels (data set columns)
+        for ($level = 0, $pos = 0; $level < $deep; $level++) {
+            // prepare row segments to compare
+            for ($i = $pos; $i < $pos+$hierarchy[$level]; $i++) {
+                $row_current .= trim($row[$i]);
+                $row_previous .= trim($rowPrev[$i]);
+            }
+            // test row segments between row_current and row_previous
+            // it should be "!==" and not "!="
+            if ($row_current !== $row_previous) {
+                // close current tag and all tags below
+                for ($i = $deep; $i >= $level; $i--) {
+                    if ($tagOpened[$i]) {
+                        $xml = $xml."</ROW$i>\n";
+                    }
+                    $tagOpened[$i] = false;
+                }
+                // reset the rest of rowPrev
+                for ($i = $pos; $i < $ncols; $i++) {
+                    $rowPrev[$i] = microtime();
+                }
+                // set flag to open
+                $tagOpened[$level] = true;
+				if ($level > 0)
+					$xml = $xml. "<ROW$level>\n";
+				else
+					$xml = $xml. "  <$tablename>\n";
+                // loop through hierarchy levels
+                for ($i = $pos; $i < $pos + $hierarchy[$level]; $i++) {
+          
+					          $name = strtoupper(mysql_field_name($result, $i));
+																			
+										if (($excludefields == "") || (strpos(strtoupper($excludefields),$name) == FALSE))
+										{																				
+    	                $xml = $xml. "    <$name>";
+
+  	                  if (trim($row[$i]) == "")
+	                      $value = "^";
+                    	else
+                      	$value = $row[$i];
+
+											//echo $row[$i]."<br>";      //pb
+											//$xml = $xml. $value;
+                    	$xml = $xml. cds_ascii2entities ($value);
+											//$xml = $xml. "[CDATA[".$value."]]";
+										
+                    	$xml = $xml. "</$name>\n";
+										}
+                }
+            }
+            // increment row position
+            $pos += $hierarchy[$level];
+            // reset row segments (part of columns)
+            $row_current = $row_previous = '';
+        }
+        // print rest
+		if ($level > 0)
+			$xml = $xml. "<ROW$level>\n";
+		else
+			$xml = $xml. "  <$tablename>\n";
+        for ($i = $pos; $i < $ncols; $i++) {
+            $name = strtoupper(mysql_field_name($result, $i));
+																		
+						if (($excludefields == "") || (strpos($excludefields,$name) == FALSE))																	
+						{
+							//echo $name."<br>";
+            	$xml = $xml. "    <$name>";
+
+            	if (trim($row[$i]) == "")
+              	 $value = "^";
+            	else
+              	 $value = $row[$i];
+
+							//echo $row[$i]."<br>";          //pb
+							//$xml = $xml. $value;
+							$xml = $xml.cds_ascii2entities ($value);
+							//$xml = $xml. "[CDATA[".$value."]]";
+
+            	$xml = $xml. "</$name>\n";
+						}	//else 						echo (strpos($excludefields,$name) == FALSE)." - ".$excludefields." ".$name."<br>";
+        }
+        if ($level > 0)
+			$xml = $xml. "</ROW$level>\n";
+		else
+			$xml = $xml. "  </$tablename>\n";
+        // remember previous row
+        $rowPrev = $row;
+    }
+    // close opened tags
+    for ($level = $deep; $level >= 0; $level--) {
+        if ($tagOpened[$level]) {
+            if ($level > 0)
+				$xml = $xml. "</ROW$level>\n";
+			else
+				$xml = $xml. "  </$tablename>\n";
+        }
+    }
+
+	return $xml;
+} 
+
+
+?>
