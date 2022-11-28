@@ -149,18 +149,17 @@ if ($sessionkey == SESSIONKEY) {
 		} 	else 		
 		if ($syncaction == 'updateusers') {			
 			$sql = "update suspi_users set useredited = 0 where id in (".$actiontype.")"; 
-			$addedusers = $cnx->QueryArray($sql,MYSQLI_ASSOC);
+			$addedusers = $cnx->Query($sql);
 			DoLogFile('CLEARUSEREDIT,'.$actiontype);			
 		} else 
 		if ($syncaction == 'resenduser') {			
 			$sql = "update suspi_users set useredited = 1 where PersonID in (".$actiontype.")"; 
-			$addedusers = $cnx->QueryArray($sql,MYSQLI_ASSOC);
+			$addedusers = $cnx->Query($sql);
 			DoLogFile('RESENDUSER,'.$actiontype);			
 		} else 
-		if ($syncaction == 'geteditusers') {
-			$siteid = $actiontype != '' ? $actiontype : '1';		
+		if ($syncaction == 'geteditusers') {		
 			$sql = "select * from v_atomusers where useredited = 1 limit 1"; 
-			$addedusers = $cnx->QueryArray($sql,MYSQLI_ASSOC);
+			$addedusers = $cnx->QueryArray($sql);
 			$json =  $cnx->GetJSON();	
 			
 			$s = "\\";
