@@ -1,0 +1,21 @@
+{"Departments": [ 
+{
+    "DepartmentID": "1",
+    "SiteID": "1",
+    "dDescription": "Members",
+    "AccessGroupID": "1"
+},
+{
+    "DepartmentID": "2",
+    "SiteID": "1",
+    "dDescription": "Admin",
+    "AccessGroupID": "1"
+},
+{
+    "DepartmentID": "3",
+    "SiteID": "1",
+    "dDescription": "Sales",
+    "AccessGroupID": "1"
+}
+]
+}

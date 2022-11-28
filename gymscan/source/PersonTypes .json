@@ -1,0 +1,43 @@
+{"PersonTypes ": [ 
+{
+    "PersonTypeID": "1",
+    "ptDescription": "Employee"
+},
+{
+    "PersonTypeID": "4",
+    "ptDescription": "Public"
+},
+{
+    "PersonTypeID": "5",
+    "ptDescription": "Maties Sport"
+},
+{
+    "PersonTypeID": "6",
+    "ptDescription": "Personal Trainer"
+},
+{
+    "PersonTypeID": "7",
+    "ptDescription": "Student"
+},
+{
+    "PersonTypeID": "8",
+    "ptDescription": "Pensioner"
+},
+{
+    "PersonTypeID": "9",
+    "ptDescription": "Aerobics Instructor"
+},
+{
+    "PersonTypeID": "10",
+    "ptDescription": "Sport Science Student"
+},
+{
+    "PersonTypeID": "11",
+    "ptDescription": "US Staff"
+},
+{
+    "PersonTypeID": "12",
+    "ptDescription": "International Athletes"
+}
+]
+}

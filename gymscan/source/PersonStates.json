@@ -1,0 +1,15 @@
+{"PersonStates": [ 
+{
+    "PersonStateID": "1",
+    "psDescription": "Active Test"
+},
+{
+    "PersonStateID": "2",
+    "psDescription": "Suspended Test"
+},
+{
+    "PersonStateID": "3",
+    "psDescription": "Deleted Test"
+}
+]
+}

@@ -1,0 +1,26 @@
+{"Readers": [ 
+{
+    "ReaderID": "1",
+    "rDescription": "Maties Gym Entrance",
+    "rIPAddress": "146.232.32.200",
+    "ReaderBrandID": "1",
+    "rType": "500",
+    "rFirmwareVersion": "3.9.0",
+    "rNumUsers": "10000",
+    "rNumDBs": "5",
+    "rFunction": "",
+    "ReaderFunctionID": "1",
+    "SiteID": "1",
+    "rRelayEnabled": "True",
+    "rRelayTime": "100",
+    "rTimeMaskEnabled": "False",
+    "rEnrolment": "True",
+    "rEmergency": "True",
+    "rPresence": "0",
+    "rLastOnlineDateTime": "2016-03-11 18:03:13",
+    "rEmergencyState": "False",
+    "rTPFixedAddress": "",
+    "rTPLogicalAddress": ""
+}
+]
+}
