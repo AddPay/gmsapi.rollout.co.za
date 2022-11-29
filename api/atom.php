@@ -12,88 +12,11 @@ require_once('api.common.php');
 require_once('cdslib/cdsutils.php');
 require_once('cdslib/cds.mysqli.class.php');
 
-
-define('SESSIONKEY','56HJ7UI927DFPT12');
-
-
-function SyncTable($cnx, $data, $wherecolumns) {
-	
-	if (strlen($data)>0) {
-		
-		$data = json_decode($data, true);
-		
-		foreach ($data as $tablename=>$rows) {
-			
-			
-			foreach ($rows as $row) {
-				foreach ($row as $key=>$value) {
-					$row[$key] = AddQuotes($value);
-					
-				}
-				$datarows[] = $row;
-				
-			}
-			
-			$result = $cnx->AutoInsertOrUpdateAllRecords($tablename, $datarows, $wherecolumns);
-			
-			if ($result) {				
-			} else {
-				echo $cnx->Error();				
-			}			
-			
-		}
-
-	
-		$updatedok = true;
-		$error = '';
-	
-		
-		if ($updatedok) {		
-       		$updatedok = 'Ok';
-		} else {
-			$updatedok = $error;			
-		}
-	} else {
-		$updatedok = 'No Data';
-	}	
-
-	return $updatedok;			
-	
-}
-
-
-function SendUserData($cnx, $database, $host, $username, $password) {
-
-	// get latest
-	$result = file_get_contents('https://matiesgym.rollout.co.za/api/cron_synccontracts.php');		
- 	
-	$sql = "select * from v_getuserupdates where v_getuserupdates.update = 1 "; 
-	//$sql = 'select * from v_getuserupdates';	
-	
-	$rows = $cnx->Query($sql);
-	//$result =  cds_sql2xml($host, $username, $password, $database, $sql);
-	
-	$result = $cnx->GetCSV(true);
-	
-	return $result;			
-	
-}
-
-function UpdateUserData($notificationsdb,$ids) {
-	
-	$sql = 'update suspi_users set `update` = 0 where id in ('.$ids.')';
-	$updatedok = $notificationsdb->Query($sql);
-	
-	if ($updatedok) {		
-       		$updatedok = 'Ok';
-		} else {
-			$updatedok = 'No';
-	}	
-	
-	return $updatedok;				
-	
-}
-
+/**
+ * @param string $message Log message
+ * 
+ * @return void
+ */
 function DoLogFile($message) {
 	
 	$time = date('Y-m-d H:i:s').','.$message.PHP_EOL;
@@ -101,95 +24,100 @@ function DoLogFile($message) {
 
 }
 
+/**
+ * @param MySQL $cnx
+ * @param string $str Comma-separated list
+ * 
+ * @return string Escaped comma-separated list
+ */
+function escapeStringList($cnx, $str)
+{
+	$unescaped_arr = explode(',', $str);
+
+	$escaped_arr = [];
+
+	foreach ($unescaped_arr as $item) {
+		$escaped_arr[] = $cnx->quote($item, true);
+	}
+
+	$escaped = implode(',', $escaped_arr);
+
+	return $escaped;
+}
+
 /*============================================================*/
-
-$_GET['sk'] = '56HJ7UI927DFPT12';
-
-//$sessionkey = cds_GetPost('sk','not found dude');		
+	
 $syncaction = cds_GetPost('action','geteditusers');		
-$actiontype = cds_GetPost('actiontype','');		
+$ids_string = cds_GetPost('actiontype','');
 
-$sessionkey = '56HJ7UI927DFPT12';
+$cnx = new MySQL(true, $database, $host, $username, $password);
 
-//cds_SaveFile('sk.txt', $sessionkey);
-
-if ($sessionkey == SESSIONKEY) {
-	
-	$cnx = new MySQL(true, $database, $host, $username, $password);
-	if ($cnx->Error()) {
-		EchoJson('result',$cnx->Error());
-	} else {
-	
-		if ($syncaction == 'getstatus') {
-			//$sql = "select get_enroll_".$siteid." from system_settings"; 
-			$sql = "select get_enroll from system_settings"; 
-			$getenroll = $cnx->QuerySingleValue($sql);
-					
-			$sql = "select useredited, allowable_sites from v_atomusers where useredited = 1 limit 1"; 
-			
-			//if ($siteid == $actiontype) {
-
-			$getedits = $cnx->QuerySingleRow($sql);	 
-			$getedit = $getedits->useredited;
-			$siteid = $getedits->allowable_sites ? $getedits->allowable_sites : 0;			
-				
-				//DoLogFile('SITEID,'.$siteid.' - '.$getedit);	
-			//}			
-						
-			$getedit = $getedit ? $getedit : '0';			
-			//DoLogFile('ACTIONTYPE,'.$actiontype);	
-			
-			echo $getedit.','.$getenroll.','.$siteid;
-			//DoLogFile('REQUEST,'.$getedit.','.$getenroll.','.$siteid.','.$actiontype);	
-			
-			if ($getenroll !== '0') {
-				DoLogFile('REQUESTENROLL,'.$getenroll.' site='.$siteid);	
-			}			
-			
-		} 	else 		
-		if ($syncaction == 'updateusers') {			
-			$sql = "update suspi_users set useredited = 0 where id in (".$actiontype.")"; 
-			$addedusers = $cnx->QueryArray($sql,MYSQLI_ASSOC);
-			DoLogFile('CLEARUSEREDIT,'.$actiontype);			
-		} else 
-		if ($syncaction == 'resenduser') {			
-			$sql = "update suspi_users set useredited = 1 where PersonID in (".$actiontype.")"; 
-			$addedusers = $cnx->QueryArray($sql,MYSQLI_ASSOC);
-			DoLogFile('RESENDUSER,'.$actiontype);			
-		} else 
-		if ($syncaction == 'geteditusers') {
-			$siteid = $actiontype != '' ? $actiontype : '1';		
-			$sql = "select * from v_atomusers where useredited = 1 limit 1"; 
-			$addedusers = $cnx->QueryArray($sql,MYSQLI_ASSOC);
-			$json =  $cnx->GetJSON();	
-			
-			$s = "\\";
-			//$json = cds_SearchAndReplace($json,$s,'',false);	
-			
-			echo $json;
-			
-			DoLogFile("USER,".$json);			
-								
-			
-			$json = cds_SearchAndReplace($json,$s,'',false);	
-			DoLogFile("JSON,".$json);			
-					
-		} else 
-		if (($syncaction == 'clearstatus') && ($actiontype)) {
-			$sql = "update system_settings set ".$actiontype." = '0'"; 
-			$result = $cnx->Query($sql);			
-			DoLogFile('CLEARSTATUS,'.$actiontype.'='.$result);
-		}			
-	}	
-
-	$cnx->Query('update system_settings set last_gymsync = now() ');
-	$cnx->Close();
+if ($cnx->Error()) {
+	EchoJson('result',$cnx->Error());
 } else {
-		EchoJson('result',"Invalid Key");
-		DoLogFile("Invalid Key");
+
+	/**
+	 * Be very careful with values that are passed to the script!
+	 * Escape them to make sure it is safe to use in queries.
+	 */
+	$ids = escapeStringList($cnx, $ids_string);
+
+	if ($syncaction == 'getstatus') {
+
+		// get the user that must be enrolled
+		$sql = "select get_enroll from system_settings"; 
+		$getenroll = $cnx->QuerySingleValue($sql);
+		
+		// check whether there are users that have been edited on ATOM - not sure??
+		$sql = "select useredited, allowable_sites from v_atomusers where useredited = 1 limit 1"; 
+		$getedits = $cnx->QuerySingleRow($sql);
+
+		$getedit = $getedits->useredited;
+		$siteid = $getedits->allowable_sites ? $getedits->allowable_sites : 0;	
+		$getedit = $getedit ? $getedit : '0';
+		
+		echo $getedit.','.$getenroll.','.$siteid;
+		
+		if ($getenroll !== '0') {
+			DoLogFile('REQUESTENROLL,'.$getenroll.' site='.$siteid);	
+		}
+
+	} else if ($syncaction == 'updateusers') {
+
+		// Set users as having been successfully updated on ATOM
+		$sql = "update suspi_users set useredited = 0 where id in (".$ids.")"; 
+		$addedusers = $cnx->Query($sql);
+		DoLogFile('CLEARUSEREDIT,'.$ids_string);
+
+	} else if ($syncaction == 'resenduser') {
+
+		// Set users needing to be updated on ATOM (retrieve those users via geteditusers)		
+		$sql = "update suspi_users set useredited = 1 where PersonID in (".$ids.")"; 
+		$addedusers = $cnx->Query($sql);
+		DoLogFile('RESENDUSER,'.$ids_string);
+
+	} else if ($syncaction == 'geteditusers') {
+
+		// Get the users needing to be updated on ATOM		
+		$sql = "select * from v_atomusers where useredited = 1 limit 1"; 
+		$addedusers = $cnx->QueryArray($sql);
+
+		$json =  $cnx->GetJSON();
+		DoLogFile("USER,".$json);
+		
+		echo $json;
+		
+		$json = cds_SearchAndReplace($json, "\\", '', false);
+		DoLogFile("JSON,".$json);	
+
+	} else if ($syncaction == 'clearstatus') {
+
+		// Clear the user set to be enrolled on ATOM. Should happen ONLY after being enrolled on ATOM.
+		$sql = "update system_settings set get_enroll = '0'"; 
+		$result = $cnx->Query($sql);			
+		DoLogFile('CLEARSTATUS,get_enroll='.$result);
+
+	}
 }	
 
-?>
-
-
-
+$cnx->Query('update system_settings set last_gymsync = now() ');

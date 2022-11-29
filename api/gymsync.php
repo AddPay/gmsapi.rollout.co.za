@@ -15,7 +15,13 @@ require_once('cdslib/cds.mysqli.class.php');
 
 define('SESSIONKEY','56HJ7UI927DFPT12');
 
-
+/**
+ * @param MySQL $cnx
+ * @param string $data A JSON object containing all the data to update/insert
+ * @param string $wherecolumns A comma separated list of columns that form part of the where statement
+ * 
+ * @return string success/error message
+ */
 function SyncTable($cnx, $data, $wherecolumns) {
 	
 	if (strlen($data)>0) {
@@ -63,8 +69,12 @@ function SyncTable($cnx, $data, $wherecolumns) {
 	
 }
 
-
-function SendUserData($cnx, $database, $host, $username, $password) {
+/**
+ * @param MySQL $cnx
+ * 
+ * @return string CSV
+ */
+function SendUserData($cnx) {
 
 	// get latest
 	$result = file_get_contents('https://matiesgym.rollout.co.za/api/cron_synccontracts.php');		
@@ -75,16 +85,22 @@ function SendUserData($cnx, $database, $host, $username, $password) {
 	$rows = $cnx->Query($sql);
 	//$result =  cds_sql2xml($host, $username, $password, $database, $sql);
 	
-	$result = $cnx->GetCSV(true);
+	$result = $cnx->GetCSV();
 	
 	return $result;			
 	
 }
 
-function UpdateUserData($notificationsdb,$ids) {
+/**
+ * @param MySQL $cnx
+ * @param string $ids IDs to set to updated
+ * 
+ * @return string success/error message
+ */
+function UpdateUserData($cnx,$ids) {
 	
 	$sql = 'update suspi_users set `update` = 0 where id in ('.$ids.')';
-	$updatedok = $notificationsdb->Query($sql);
+	$updatedok = $cnx->Query($sql);
 	
 	if ($updatedok) {		
        		$updatedok = 'Ok';
@@ -96,24 +112,42 @@ function UpdateUserData($notificationsdb,$ids) {
 	
 }
 
+/**
+ * @param MySQL $cnx
+ * @param string $str Comma-separated list
+ * 
+ * @return string Escaped comma-separated list
+ */
+function escapeStringList($cnx, $str)
+{
+	$unescaped_arr = explode(',', $str);
+
+	$escaped_arr = [];
+
+	foreach ($unescaped_arr as $item) {
+		$escaped_arr[] = $cnx->quote($item, true);
+	}
+
+	$escaped = implode(',', $escaped_arr);
+
+	return $escaped;
+}
+
 
 
 /*============================================================*/
-
-$_GET['sk'] = '56HJ7UI927DFPT12';
-
-
-$sessionkey = GetPost('sk','not found dude');		
+		
 $syncaction = GetPost('sa','down');		
 $data = GetPost('da','');
 $ids = GetPost('ids','0');
 $wherecolumns = GetPost('wc','');
 
 
-//$syncaction = 'update';
+$syncaction = 'up';
+$ids = '2,3';
 
-//$wherecolumns = 'TransactionID';
-/*$data = '
+$wherecolumns = 'TransactionID';
+$data = '
 {  "Transactions": [
     {
       "TransactionID": "1",
@@ -157,49 +191,39 @@ $wherecolumns = GetPost('wc','');
       "tExtProcessed": "0",
       "tLogical": "0"
     }
-  ]}'; */
-		
-
-//cds_SaveFile('sk.txt', $sessionkey);
-
-$sessionkey = '56HJ7UI927DFPT12';
-
-if ($sessionkey == SESSIONKEY) {
+  ]}';
 	
-	$notificationsdb = new MySQL(true, $database, $host, $username, $password);
-	if ($notificationsdb->Error()) {
-		EchoJson('result',$notificationsdb->Error());
-	} else {
-	
-		if ($syncaction == 'down') {
-			$result = SendUserData($notificationsdb, $database, $host, $username, $password);
-			echo $result;
-			if (strlen($result) > 10) {
-			  cds_SaveFile(date('Ymd_His').'_userdata.txt', $result);	
-			}					
-		} 	else 		
-		if ($syncaction == 'update') {
-			$result = UpdateUserData($notificationsdb,$ids);		
-			cds_SaveFile(date('Ymd_His').'_update.txt', $ids);			
-			EchoJson('result',$result);	
-		} else {
-
-			$result = SyncTable($notificationsdb, $data, $wherecolumns);
-			EchoJson('result',$result);
-			if (($wherecolumns != 'ReaderID') && ($wherecolumns != 'TransactionID')) {
-				cds_LogFile('synctable', 'WHERE:'.$wherecolumns.' Data:'.$data);	
-			}	
-			
-		}
-		
-	}	
-
-	$notificationsdb->Close();
+$cnx = new MySQL(true, $database, $host, $username, $password);
+if ($cnx->Error()) {
+	EchoJson('result',$cnx->Error());
 } else {
-		EchoJson('result',"Invalid Key");
-}	
 
-?>
+	if ($syncaction == 'down') {
 
+		// Get all updated GMS users
+		$result = SendUserData($cnx);
+		echo $result;
+		if (strlen($result) > 10) {
+			cds_SaveFile(date('Ymd_His').'_userdata.txt', $result);	
+		}	
 
+	} else if ($syncaction == 'update') {
 
+		// Set GMS users specified by $ids as being updated on ATOM
+		$escaped_ids = escapeStringList($cnx, $ids);
+		$result = UpdateUserData($cnx, $escaped_ids);		
+		cds_SaveFile(date('Ymd_His').'_update.txt', $ids);			
+		EchoJson('result',$result);	
+
+	} else {
+
+		// Update GMS with data from ATOM.
+		$result = SyncTable($cnx, $data, $wherecolumns);
+		EchoJson('result',$result);
+		if (($wherecolumns != 'ReaderID') && ($wherecolumns != 'TransactionID')) {
+			cds_LogFile('synctable', 'WHERE:'.$wherecolumns.' Data:'.$data);	
+		}
+
+	}
+	
+}
