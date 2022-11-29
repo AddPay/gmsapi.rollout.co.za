@@ -143,55 +143,55 @@ $ids = GetPost('ids','0');
 $wherecolumns = GetPost('wc','');
 
 
-$syncaction = 'up';
-$ids = '2,3';
+// $syncaction = 'up';
+// $ids = '2,3';
 
-$wherecolumns = 'TransactionID';
-$data = '
-{  "Transactions": [
-    {
-      "TransactionID": "1",
-      "tDateTime": "2015-11-02 11:16:50",
-      "PersonID": "1",
-      "ReaderID": "1",
-      "tDirection": "OUT",
-      "tReaderDescription": "Maties Gym Entrance",
-      "tManual": "0",
-      "tDeleted": "0",
-      "tTAProcessed": "0",
-      "TimesheetDayID": "0",
-      "tExtProcessed": "0",
-      "tLogical": "0"
-    },
-    {
-      "TransactionID": "2",
-      "tDateTime": "2015-11-02 11:17:59",
-      "PersonID": "1",
-      "ReaderID": "1",
-      "tDirection": "IN        ",
-      "tReaderDescription": "Maties Gym Entrance",
-      "tManual": "0",
-      "tDeleted": "0",
-      "tTAProcessed": "0",
-      "TimesheetDayID": "0",
-      "tExtProcessed": "0",
-      "tLogical": "0"
-    },  
-    {
-      "TransactionID": "28",
-      "tDateTime": "2015-11-03 03:39:17",
-      "PersonID": "7",
-      "ReaderID": "1",
-      "tDirection": "IN        ",
-      "tReaderDescription": "Maties Gym Entrance",
-      "tManual": "0",
-      "tDeleted": "0",
-      "tTAProcessed": "0",
-      "TimesheetDayID": "0",
-      "tExtProcessed": "0",
-      "tLogical": "0"
-    }
-  ]}';
+// $wherecolumns = 'TransactionID';
+// $data = '
+// {  "Transactions": [
+//     {
+//       "TransactionID": "1",
+//       "tDateTime": "2015-11-02 11:16:50",
+//       "PersonID": "1",
+//       "ReaderID": "1",
+//       "tDirection": "OUT",
+//       "tReaderDescription": "Maties Gym Entrance",
+//       "tManual": "0",
+//       "tDeleted": "0",
+//       "tTAProcessed": "0",
+//       "TimesheetDayID": "0",
+//       "tExtProcessed": "0",
+//       "tLogical": "0"
+//     },
+//     {
+//       "TransactionID": "2",
+//       "tDateTime": "2015-11-02 11:17:59",
+//       "PersonID": "1",
+//       "ReaderID": "1",
+//       "tDirection": "IN        ",
+//       "tReaderDescription": "Maties Gym Entrance",
+//       "tManual": "0",
+//       "tDeleted": "0",
+//       "tTAProcessed": "0",
+//       "TimesheetDayID": "0",
+//       "tExtProcessed": "0",
+//       "tLogical": "0"
+//     },  
+//     {
+//       "TransactionID": "28",
+//       "tDateTime": "2015-11-03 03:39:17",
+//       "PersonID": "7",
+//       "ReaderID": "1",
+//       "tDirection": "IN        ",
+//       "tReaderDescription": "Maties Gym Entrance",
+//       "tManual": "0",
+//       "tDeleted": "0",
+//       "tTAProcessed": "0",
+//       "TimesheetDayID": "0",
+//       "tExtProcessed": "0",
+//       "tLogical": "0"
+//     }
+//   ]}';
 	
 $cnx = new MySQL(true, $database, $host, $username, $password);
 if ($cnx->Error()) {
