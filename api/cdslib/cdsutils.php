@@ -1177,7 +1177,7 @@ function cds_QuoteArrayValues($valuearay, $dblink = null, $ignorenullvalues = fa
 function cds_QuoteArray($ids) {
 
 	$ids = explode(',', $ids);
-	$ids = "'".implode($ids,"','")."'";
+	$ids = "'".implode("','",$ids)."'";
 	return $ids;
 
 }
