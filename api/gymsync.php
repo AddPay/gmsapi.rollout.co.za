@@ -222,7 +222,8 @@ if ($cnx->Error()) {
 		$result = SyncTable($cnx, $data, $wherecolumns);
 		EchoJson('result',$result);
 		if (($wherecolumns != 'ReaderID') && ($wherecolumns != 'TransactionID')) {
-			cds_LogFile('synctable', 'WHERE:'.$wherecolumns.' Data:'.$data);	
+			$string_data = is_array($data) ? json_encode($data) : $data;
+			cds_LogFile('synctable', 'WHERE:'.$wherecolumns.' Data:'.$string_data);	
 		}
 
 	}
