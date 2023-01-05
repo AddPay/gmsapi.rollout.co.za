@@ -1,7 +1,7 @@
 <?php
 
 /*===============================================================*/
-//------------ API to add position data to database   ------------
+//------------   API to sync atom and gms databases   ------------
 //-----          Paul Bailey May 2015                        -----
 //-----                                                      -----
 //----------------------------------------------------------------
@@ -12,7 +12,7 @@ require_once('api.common.php');
 require_once('cdslib/cdsutils.php');
 require_once('cdslib/cds.mysqli.class.php');
 
-
+cds_LogFile('synctable', 'script is running');
 define('SESSIONKEY','56HJ7UI927DFPT12');
 
 /**
@@ -23,13 +23,16 @@ define('SESSIONKEY','56HJ7UI927DFPT12');
  * @return string success/error message
  */
 function SyncTable($cnx, $data, $wherecolumns) {
+
+	if (is_string($data) && strlen($data)>0) {
+		try {
+			$data = json_decode($data, true);
+		} catch (\Throwable $th) { }
+	}
 	
-	if (strlen($data)>0) {
-		
-		$data = json_decode($data, true);
+	if (is_array($data)) {
 		
 		foreach ($data as $tablename=>$rows) {
-			
 			
 			foreach ($rows as $row) {
 				foreach ($row as $key=>$value) {
@@ -42,11 +45,9 @@ function SyncTable($cnx, $data, $wherecolumns) {
 			
 			$result = $cnx->AutoInsertOrUpdateAllRecords($tablename, $datarows, $wherecolumns);
 			
-			if ($result) {				
-			  //cds_LogFile('sync', $tablename.' r='.$result.' '.print_r($data,true));			
-			} else {
+			if ($cnx->Error()) {
 				echo $cnx->Error();		
-				cds_LogFile('syncerror', 'WHERE:'.$wherecolumns.' Data:'.$data);			
+				cds_LogFile('syncerror', $cnx->Error());			
 			}			
 			
 		}
@@ -137,11 +138,10 @@ function escapeStringList($cnx, $str)
 
 /*============================================================*/
 		
-$syncaction = GetPost('sa','down');		
-$data = GetPost('da','');
-$ids = GetPost('ids','0');
-$wherecolumns = GetPost('wc','');
-
+$syncaction = cds_GetPost('sa','down');		
+$data = cds_GetPost('da','');
+$ids = cds_GetPost('ids','0');
+$wherecolumns = cds_GetPost('wc','');
 
 // $syncaction = 'up';
 // $ids = '2,3';
@@ -192,6 +192,7 @@ $wherecolumns = GetPost('wc','');
 //       "tLogical": "0"
 //     }
 //   ]}';
+// cds_LogFile('synctable', $syncaction . $wherecolumns . print_r($data, true));	
 	
 $cnx = new MySQL(true, $database, $host, $username, $password);
 if ($cnx->Error()) {
