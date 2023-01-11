@@ -12,6 +12,9 @@ require_once('api.common.php');
 require_once('cdslib/cdsutils.php');
 require_once('cdslib/cds.mysqli.class.php');
 
+define('SESSIONKEY','56HJ7UI927DFPT12');
+define('DEBUG', true);
+
 /**
  * @param string $message Log message
  * 
@@ -46,14 +49,24 @@ function escapeStringList($cnx, $str)
 }
 
 /*============================================================*/
-	
+
+$session_key = cds_GetPost('sk','');	
 $syncaction = cds_GetPost('action','geteditusers');		
 $ids_string = cds_GetPost('actiontype','');
+
+if ($session_key !== SESSIONKEY && !DEBUG) {
+	die;
+}
 
 $cnx = new MySQL(true, $database, $host, $username, $password);
 
 if ($cnx->Error()) {
-	EchoJson('result',$cnx->Error());
+	$response = [
+		"status" => "fail",
+		"message" => $cnx->Error(),
+		"data" => [],
+	];
+	echo json_encode($response);
 } else {
 
 	/**
@@ -62,26 +75,67 @@ if ($cnx->Error()) {
 	 */
 	$ids = escapeStringList($cnx, $ids_string);
 
-	if ($syncaction == 'getstatus') {
+	if ($syncaction == 'getenrollmentrequests') {
 
 		// get the user that must be enrolled
-		$sql = "select get_enroll from system_settings"; 
-		$getenroll = $cnx->QuerySingleValue($sql);
-		
-		// check whether there are users that have been edited on ATOM - not sure??
-		$sql = "select useredited, allowable_sites from v_atomusers where useredited = 1 limit 1"; 
-		$getedits = $cnx->QuerySingleRow($sql);
 
-		$getedit = $getedits->useredited;
-		$siteid = $getedits->allowable_sites ? $getedits->allowable_sites : 0;	
-		$getedit = $getedit ? $getedit : '0';
+		$response = [];
+
+		$sql = "SELECT ip_address, id, pPersonNumber FROM enrollment_requests WHERE actioned = 0 GROUP BY ip_address ORDER BY id"; 
+		$requests = $cnx->QueryArray($sql);
+
+		if ($requests) {
+
+			$response = [
+				"status" => "success",
+				"message" => "enrollment requests found",
+				"data" => $requests,
+			];
+
+		} else {
+
+			$response = [
+				"status" => "success",
+				"message" => "no enrollments found",
+				"data" => [],
+			];
+
+		}
 		
-		echo $getedit.','.$getenroll.','.$siteid;
-		
-		if ($getenroll !== '0') {
-			DoLogFile('REQUESTENROLL,'.$getenroll.' site='.$siteid);	
+		$json = json_encode($response);
+
+		echo $json;
+
+		DoLogFile('GETENROLLREQ,'.$json);
+
+	} else if ($syncaction == 'isenrolled') {
+		$sql = "SELECT actioned FROM enrollment_requests WHERE id = $ids";
+		$actioned = $cnx->QuerySingleValue($sql);
+
+		if ($actioned === '1') {
+			$response = [
+				"status" => "success",
+				"message" => "is enrolled",
+				"data" => [],
+			];
+		} else if ($actioned === '0') {
+			$response = [
+				"status" => "success",
+				"message" => "not enrolled",
+				"data" => [],
+			];
+		} else {
+			$response = [
+				"status" => "fail",
+				"message" => "Could not determine enrollment state of id=$ids",
+				"data" => [],
+			];
 		}
 
+		$json = json_encode($response);
+		echo $json;
+
+		DoLogFile('ISENROLLED,'.$json);
 	} else if ($syncaction == 'updateusers') {
 
 		// Set users as having been successfully updated on ATOM
@@ -110,12 +164,28 @@ if ($cnx->Error()) {
 		$json = cds_SearchAndReplace($json, "\\", '', false);
 		DoLogFile("JSON,".$json);	
 
-	} else if ($syncaction == 'clearstatus') {
+	} else if ($syncaction == 'setactioned') {
 
-		// Clear the user set to be enrolled on ATOM. Should happen ONLY after being enrolled on ATOM.
-		$sql = "update system_settings set get_enroll = '0'"; 
-		$result = $cnx->Query($sql);			
-		DoLogFile('CLEARSTATUS,get_enroll='.$result);
+		$values_array = [
+			"actioned" => 1,
+		];
+
+		$where_array = [
+			"id" => $ids,
+		];
+
+		$result = $cnx->UpdateRows('enrollment_requests', $values_array, $where_array);
+
+		$response = [
+			"status" => $result ? 'success' : 'fail',
+			"message" => $cnx->Error(),
+			"data" => [],
+		];
+
+		$json = json_encode($response);
+		echo $json;
+				
+		DoLogFile('SETACTIONED,'.$json);
 
 	}
 }	
