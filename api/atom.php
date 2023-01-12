@@ -50,8 +50,27 @@ function escapeStringList($cnx, $str)
 
 /*============================================================*/
 
-$session_key = cds_GetPost('sk','');	
-$syncaction = cds_GetPost('action','geteditusers');		
+/**
+ * A small security measure.
+ * If the request sends the correct sk, the request will be processed
+ */
+$session_key = cds_GetPost('sk','');
+
+/**
+ * Can be:
+ * - getenrollmentrequests: get enrollment requests (one per serving PC)
+ * - isactioned: check whether an enrollment request has been process
+ * - updateusers: Set users on GMS as having been successfully updated on ATOM
+ * - resenduser: Set users needing to be updated on ATOM (retrieve those users via geteditusers)
+ * - geteditusers: get users needing to be updated on ATOM
+ * - setactioned: set an enrollment request as being actioned
+ */
+$syncaction = cds_GetPost('action','geteditusers');
+
+/**
+ * This is a string of comma-separated ids to apply the "syncaction" to
+ * Not applicable to all sync actions
+ */
 $ids_string = cds_GetPost('actiontype','');
 
 if ($session_key !== SESSIONKEY && !DEBUG) {
@@ -77,11 +96,24 @@ if ($cnx->Error()) {
 
 	if ($syncaction == 'getenrollmentrequests') {
 
-		// get the user that must be enrolled
+		/**
+		 * This returns non-actioned enrollment requests
+		 * One request per requesting IP.
+		 * GymSync uses the IP and PersonNumber to trigger the enrollment
+		 * for the correct person on the correct PC
+		 * 
+		 * Only computers with the ATOM enrollment helper will be able to enroll users.
+		 * Currently Maties has 2 front desk computers in Stellies and a Tygerberg computer
+		 * that can do enrollments.
+		 * 
+		 * Server PC: 	146.232.34.44
+		 * PC2:			146.232.33.87
+		 * Tyg:			146.232.173.73
+		 */
 
 		$response = [];
 
-		$sql = "SELECT ip_address, id, pPersonNumber FROM enrollment_requests WHERE actioned = 0 GROUP BY ip_address ORDER BY id"; 
+		$sql = "SELECT id, pPersonNumber, ip_address FROM enrollment_requests WHERE actioned = 0 GROUP BY ip_address ORDER BY id"; 
 		$requests = $cnx->QueryArray($sql);
 
 		if ($requests) {
@@ -108,26 +140,30 @@ if ($cnx->Error()) {
 
 		DoLogFile('GETENROLLREQ,'.$json);
 
-	} else if ($syncaction == 'isenrolled') {
+	} else if ($syncaction == 'isactioned') {
+		/**
+		 * Checks to see whether the a specific enrollment request
+		 * has been actioned.
+		 */
 		$sql = "SELECT actioned FROM enrollment_requests WHERE id = $ids";
 		$actioned = $cnx->QuerySingleValue($sql);
 
 		if ($actioned === '1') {
 			$response = [
 				"status" => "success",
-				"message" => "is enrolled",
+				"message" => "actioned",
 				"data" => [],
 			];
 		} else if ($actioned === '0') {
 			$response = [
 				"status" => "success",
-				"message" => "not enrolled",
+				"message" => "not actioned",
 				"data" => [],
 			];
 		} else {
 			$response = [
 				"status" => "fail",
-				"message" => "Could not determine enrollment state of id=$ids",
+				"message" => "Could not determine actioned state of id=$ids",
 				"data" => [],
 			];
 		}
@@ -135,7 +171,7 @@ if ($cnx->Error()) {
 		$json = json_encode($response);
 		echo $json;
 
-		DoLogFile('ISENROLLED,'.$json);
+		DoLogFile('ISACTIONED,'.$json);
 	} else if ($syncaction == 'updateusers') {
 
 		// Set users as having been successfully updated on ATOM
@@ -166,21 +202,37 @@ if ($cnx->Error()) {
 
 	} else if ($syncaction == 'setactioned') {
 
-		$values_array = [
-			"actioned" => 1,
-		];
+		$sql = "SELECT COUNT(id) FROM enrollment_requests WHERE id = $ids";
 
-		$where_array = [
-			"id" => $ids,
-		];
+		$count = $cnx->QuerySingleValue($sql);
+		$response = [];
 
-		$result = $cnx->UpdateRows('enrollment_requests', $values_array, $where_array);
+		if (intval($count) > 0) {
+			/**
+			 * Set a specific enrollment request as actioned
+			 */
+			$values_array = [
+				"actioned" => 1,
+			];
 
-		$response = [
-			"status" => $result ? 'success' : 'fail',
-			"message" => $cnx->Error(),
-			"data" => [],
-		];
+			$where_array = [
+				"id" => $ids,
+			];
+
+			$result = $cnx->UpdateRows('enrollment_requests', $values_array, $where_array);
+
+			$response = [
+				"status" => $result ? 'success' : 'fail',
+				"message" => $cnx->Error(),
+				"data" => [],
+			];
+		} else {
+			$response = [
+				"status" => 'fail',
+				"message" => "Enrollment record not found.",
+				"data" => [],
+			];
+		}
 
 		$json = json_encode($response);
 		echo $json;
